@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback } from "react";
 
+// === UPS COST PRICES (BL Logistics cennik 2026) ===
 const SERVICES=[
 {id:"std_kraj",name:"UPS Standard Krajowy (Jednopaczkowy)",short:"Standard Kraj",dir:"kraj",fuelType:"std",
 zones:[{z:"1",m:"KRAJ",d:""},{z:"3",m:"TB",d:""},{z:"4",m:"TB",d:""},{z:"5",m:"TB",d:""},{z:"6",m:"TB",d:""},{z:"7",m:"TB",d:""},{z:"3",m:"TB",d:"Niemcy"},{z:"4",m:"TB",d:"Niemcy"},{z:"706",m:"WW",d:"Wielka Brytania"}],
@@ -24,6 +25,18 @@ zones:[{z:"1",m:"KRAJ",d:""},{z:"3",m:"TB",d:""},{z:"4",m:"TB",d:""},{z:"5",m:"T
 prices:[[1,18.14,109.62,118.94,130.18,136.44,140.74,172.18],[5,18.14,109.62,118.94,130.18,136.44,140.74,172.18],[10,18.14,109.62,118.94,130.18,136.44,140.74,172.18],[20,18.14,109.62,118.94,130.18,136.44,140.74,172.18],[25,18.14,109.62,118.94,130.18,136.44,140.74,172.18],[30,18.14,109.62,118.94,131.56,139.22,144.15,172.18],[40,21.24,109.62,118.94,131.56,139.22,144.15,172.18],[50,21.24,112.73,118.94,150.22,156.46,163.99,174.92],[60,26.6,124.2,128.12,168.04,174.4,183.68,193.23],[70,32.61,135.81,138.89,186.0,192.37,204.53,211.56],[80,38.46,150.49,159.88,205.1,215.53,229.13,235.18],[90,44.01,165.47,180.04,224.22,239.72,254.2,259.85],[100,49.69,181.28,200.18,243.48,263.9,279.69,284.52]]},
 ];
 
+// === BLPaczka SELL PRICES (from system cennik) ===
+const SELL_OLD = { // Stary cennik
+  label: "Stary cennik",
+  ANY:{1:10.99,2:10.99,3:10.99,4:10.99,5:10.99,6:10.99,7:10.99,8:10.99,9:10.99,10:10.99,11:12.49,12:12.49,13:12.49,14:12.49,15:12.49,16:12.49,17:12.49,18:12.49,19:12.49,20:12.49,21:12.49,22:12.49,23:12.49,24:12.49,25:12.49,26:19.49,27:19.49,28:19.49,29:19.49,30:19.49,31:22.49,32:22.49,33:22.49,34:22.49,35:22.49,40:22.49,45:22.49,50:22.49,55:30.49,60:30.49,65:37.49,70:37.49},
+  BL:{1:9.99,2:9.99,3:9.99,4:9.99,5:9.99,6:9.99,7:9.99,8:9.99,9:9.99,10:9.99,11:11.49,12:11.49,13:11.49,14:11.49,15:11.49,16:11.49,17:11.49,18:11.49,19:11.49,20:11.49,21:11.49,22:11.49,23:11.49,24:11.49,25:11.49,26:18.49,27:18.49,28:18.49,29:18.49,30:18.49,31:21.49,32:21.49,33:21.49,34:21.49,35:21.49,40:21.49,45:21.49,50:21.49,55:29.49,60:29.49,65:36.49,70:36.49},
+};
+const SELL_NEW = { // Nowy cennik #141
+  label: "Nowy cennik #141",
+  ANY:{1:11.79,2:11.79,3:11.79,4:11.79,5:11.79,6:11.99,7:11.99,8:11.99,9:11.99,10:11.99,11:12.99,12:12.99,13:12.99,14:12.99,15:12.99,16:13.99,17:13.99,18:13.99,19:13.99,20:13.99,21:15.36,22:15.36,23:15.36,24:15.36,25:15.36,26:20.99,27:20.99,28:20.99,29:20.99,30:20.99,31:23.49,32:23.49,33:23.49,34:23.49,35:23.49,40:23.49,45:23.49,50:23.49,55:30.99,60:30.99,65:39.99,70:39.99},
+  BL:{1:10.79,2:10.79,3:10.79,4:10.79,5:10.79,6:10.99,7:10.99,8:10.99,9:10.99,10:10.99,11:11.99,12:11.99,13:11.99,14:11.99,15:11.99,16:12.99,17:12.99,18:12.99,19:12.99,20:12.99,21:14.36,22:14.36,23:14.36,24:14.36,25:14.36,26:19.99,27:19.99,28:19.99,29:19.99,30:19.99,31:22.49,32:22.49,33:22.49,34:22.49,35:22.49,40:22.49,45:22.49,50:22.49,55:29.99,60:29.99,65:38.99,70:38.99},
+};
+
 const SURCHARGES=[
 {id:"cod",name:"Pobranie (COD)",type:"cod",kP:0.002,kMin:2.70,iP:0.002,iMin:21.61,fuel:false},
 {id:"handling",name:"Obsługa nietypowej przesyłki",type:"fixed",kP:6.35,iP:40.07,fuel:true},
@@ -46,24 +59,23 @@ const f2=v=>v!=null?v.toFixed(2).replace(".",","):"—";
 const fP=v=>v!=null?(v*100).toFixed(1).replace(".",",")+"%":"—";
 
 export default function App(){
-  const[mode,setMode]=useState("allin"); // "separate" or "allin"
+  const[mode,setMode]=useState("allin");
   const[svcId,setSvcId]=useState(SERVICES[0].id);
   const[zi,setZi]=useState(0);
   const[weight,setWeight]=useState("5");
-  const[fuelK,setFuelK]=useState("30.50");
+  const[fuelK,setFuelK]=useState("31.50");
   const[fuelI,setFuelI]=useState("48.25");
   const[sellPrice,setSellPrice]=useState("");
   const[tgtM,setTgtM]=useState("15");
   const[actSC,setActSC]=useState({});
   const[codVal,setCodVal]=useState("");
+  const[clientType,setClientType]=useState("ANY"); // ANY=Pozostali, BL=BaseLinker
 
   const svc=SERVICES.find(s=>s.id===svcId);
   const zone=svc?.zones[zi];
   const isKraj=zone?.m==="KRAJ";
 
-  // Fuel rate: krajowa for domestic zones, międzynarodowa for TB/WW zones
   const fuelFull=isKraj?parseFloat(fuelK.replace(",","."))||0:parseFloat(fuelI.replace(",","."))||0;
-  // Fuel discount: 50% for Standard/Saver, 25% for Express/Expedited
   const fuelDiscBL=svc?.fuelType==="std"?50:25;
   const fuelBL=fuelFull*(1-fuelDiscBL/100);
 
@@ -73,10 +85,8 @@ export default function App(){
   const scDetails=useMemo(()=>{
     const d=[];let tot=0,totFuelable=0;
     Object.entries(actSC).forEach(([id,on])=>{
-      if(!on)return;
-      const sc=SURCHARGES.find(s=>s.id===id);if(!sc)return;
-      const price=isKraj?sc.kP:sc.iP;
-      let cost=0;
+      if(!on)return;const sc=SURCHARGES.find(s=>s.id===id);if(!sc)return;
+      const price=isKraj?sc.kP:sc.iP;let cost=0;
       if(sc.type==="cod"){const cv=parseFloat((codVal||"0").replace(",","."))||0;cost=Math.max(cv*price,isKraj?sc.kMin:sc.iMin);}
       else cost=price;
       if(cost>0.001){d.push({id,name:sc.name,cost,fuel:sc.fuel});if(sc.fuel)totFuelable+=cost;tot+=cost;}
@@ -84,7 +94,6 @@ export default function App(){
     return{d,tot,totFuelable};
   },[actSC,codVal,isKraj]);
 
-  // === COST BL (always the same regardless of mode) ===
   const fuelOnBaseBL=upsBase!=null?upsBase*(fuelBL/100):null;
   const fuelOnScBL=scDetails.totFuelable*(fuelBL/100);
   const costBL=upsBase!=null?upsBase+fuelOnBaseBL+fuelOnScBL+scDetails.tot:null;
@@ -92,58 +101,60 @@ export default function App(){
   const sp=parseFloat((sellPrice||"0").replace(",","."))||0;
   const tm=parseFloat(tgtM.replace(",","."))||0;
 
-  // === MODE-DEPENDENT REVENUE ===
-  let clientTotal=null, fuelOnSellFull=0, fuelOnScFull=0, fuelProfit=null;
-
+  let clientTotal=null,fuelOnSellFull=0,fuelOnScFull=0,fuelProfit=null;
   if(mode==="separate"){
-    // Tryb A: cennik bez paliwowej, paliwowa doliczana osobno
-    fuelOnSellFull=sp*(fuelFull/100);
-    fuelOnScFull=scDetails.totFuelable*(fuelFull/100);
+    fuelOnSellFull=sp*(fuelFull/100);fuelOnScFull=scDetails.totFuelable*(fuelFull/100);
     clientTotal=sp>0?sp+fuelOnSellFull+fuelOnScFull+scDetails.tot:null;
     fuelProfit=upsBase!=null&&sp>0?(sp*(fuelFull/100)-upsBase*(fuelBL/100))+(scDetails.totFuelable*((fuelFull-fuelBL)/100)):null;
   } else {
-    // Tryb B: cennik all-in (cena już zawiera paliwową)
-    // klient płaci: sellPrice + surcharges + fuel on fuelable surcharges (full)
     fuelOnScFull=scDetails.totFuelable*(fuelFull/100);
     clientTotal=sp>0?sp+fuelOnScFull+scDetails.tot:null;
-    fuelProfit=null; // w trybie all-in zysk na paliwowej jest wliczony w marżę cennikową
   }
-
   const marginAmt=clientTotal!=null&&costBL!=null?clientTotal-costBL:null;
   const marginPct=clientTotal!=null&&clientTotal>0&&costBL!=null?(clientTotal-costBL)/clientTotal:null;
 
-  // === SUGGESTED SELL PRICE ===
-  let sugSellPrice=null, sugClientTotal=null;
+  let sugSellPrice=null,sugClientTotal=null;
   if(costBL!=null&&tm<100){
     sugClientTotal=costBL/(1-tm/100);
-    if(mode==="separate"){
-      const scConst=scDetails.totFuelable*(fuelFull/100)+scDetails.tot;
-      sugSellPrice=(sugClientTotal-scConst)/(1+fuelFull/100);
-    } else {
-      const scConst=scDetails.totFuelable*(fuelFull/100)+scDetails.tot;
-      sugSellPrice=sugClientTotal-scConst;
-    }
+    const scConst=scDetails.totFuelable*(fuelFull/100)+scDetails.tot;
+    sugSellPrice=mode==="separate"?(sugClientTotal-scConst)/(1+fuelFull/100):sugClientTotal-scConst;
   }
 
   const zL=useCallback(z=>{let l=`Strefa ${z.z} (${z.m})`;if(z.d)l+=` · ${z.d}`;return l;},[]);
   const toggle=id=>setActSC(p=>({...p,[id]:!p[id]}));
 
+  // === COMPARISON TABLE (only for Standard Kraj, zone KRAJ) ===
+  const isStdKraj=svcId==="std_kraj"&&zone?.m==="KRAJ";
+  const compTable=useMemo(()=>{
+    if(!isStdKraj)return null;
+    const weights=[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,40,45,50,55,60,65,70];
+    return weights.map(kg=>{
+      const ups=findPrice(SERVICES[0],0,kg);
+      if(ups==null)return null;
+      const fuel=ups*(fuelBL/100);
+      const cost=ups+fuel;
+      const tier=clientType;
+      const oldP=SELL_OLD[tier]?.[kg];
+      const newP=SELL_NEW[tier]?.[kg];
+      const oldMargin=oldP!=null?oldP-cost:null;
+      const newMargin=newP!=null?newP-cost:null;
+      const oldPct=oldP!=null&&oldP>0?(oldP-cost)/oldP:null;
+      const newPct=newP!=null&&newP>0?(newP-cost)/newP:null;
+      return{kg,ups,fuel,cost,oldP,newP,oldMargin,newMargin,oldPct,newPct};
+    }).filter(Boolean);
+  },[isStdKraj,fuelBL,clientType]);
+
   const ptable=useMemo(()=>{
     if(!svc)return[];
     return svc.prices.map(r=>{
       const b=r[zi+1];if(b==null)return null;
-      const fBL=b*(fuelBL/100);
-      const fFull=b*(fuelFull/100);
+      const fBL=b*(fuelBL/100);const fFull=b*(fuelFull/100);
       return{kg:r[0],ups:b,fuelBL:fBL,costBL:b+fBL,fuelFull:fFull,withFuelFull:b+fFull,fuelProfit:fFull-fBL};
     }).filter(Boolean);
   },[svc,zi,fuelBL,fuelFull]);
 
-  // Styles
-  const modeBtn=(m)=>({
-    flex:1,padding:"8px 12px",border:"none",borderRadius:4,cursor:"pointer",fontSize:11,fontWeight:700,fontFamily:"inherit",letterSpacing:0.5,
-    background:mode===m?"#f59e0b":"#1e293b",color:mode===m?"#0a0e17":"#94a3b8",
-    transition:"all 0.15s"
-  });
+  const modeBtn=m=>({flex:1,padding:"8px 12px",border:"none",borderRadius:4,cursor:"pointer",fontSize:11,fontWeight:700,fontFamily:"inherit",letterSpacing:0.5,background:mode===m?"#f59e0b":"#1e293b",color:mode===m?"#0a0e17":"#94a3b8",transition:"all 0.15s"});
+  const tierBtn=t=>({flex:1,padding:"6px 10px",border:"none",borderRadius:4,cursor:"pointer",fontSize:10,fontWeight:700,fontFamily:"inherit",background:clientType===t?"#3b82f6":"#1e293b",color:clientType===t?"#fff":"#94a3b8"});
 
   return(
     <div style={{fontFamily:"'JetBrains Mono','SF Mono',monospace",background:"#0a0e17",color:"#e2e8f0",minHeight:"100vh",padding:"14px"}}>
@@ -152,39 +163,30 @@ export default function App(){
         <p style={{fontSize:9,color:"#64748b",margin:"3px 0 0"}}>BL Logistics · Cennik 2026 · Netto bez VAT · Rabat paliwowy: Standard 50% / Express 25%</p>
       </div>
 
-      {/* MODE TOGGLE */}
       <div style={{display:"flex",gap:4,marginBottom:14,background:"#0f172a",padding:4,borderRadius:6,border:"1px solid #1e293b"}}>
-        <button style={modeBtn("allin")} onClick={()=>setMode("allin")}>
-          🅰 ALL-IN — cena w cenniku zawiera paliwową
-        </button>
-        <button style={modeBtn("separate")} onClick={()=>setMode("separate")}>
-          🅱 OSOBNO — paliwowa doliczana osobno w tabelce
-        </button>
+        <button style={modeBtn("allin")} onClick={()=>setMode("allin")}>🅰 ALL-IN — cena zawiera paliwową</button>
+        <button style={modeBtn("separate")} onClick={()=>setMode("separate")}>🅱 OSOBNO — paliwowa doliczana osobno</button>
       </div>
 
-      {/* Mode description */}
       <div style={{fontSize:10,color:"#64748b",marginBottom:12,padding:8,background:"#0f172a",borderRadius:4,border:"1px solid #1e293b",borderLeft:`3px solid ${mode==="allin"?"#f59e0b":"#3b82f6"}`}}>
         {mode==="allin"
-          ?<>Cena w cenniku BLPaczka = <b style={{color:"#e2e8f0"}}>kwota all-in</b> którą klient widzi i płaci (paliwowa już wliczona). Twój koszt = netto UPS + paliwowa po rabacie {fuelDiscBL}%. Różnica = Twoja marża.</>
-          :<>Cena w cenniku BLPaczka = <b style={{color:"#e2e8f0"}}>kwota bez paliwowej</b>. Klient dodatkowo płaci pełną dopłatę paliwową ({fuelFull.toFixed(2).replace(".",",")}%). BL płaci UPS paliwową po rabacie ({fuelBL.toFixed(2).replace(".",",")}%). Różnica na paliwowej = dodatkowy zysk.</>
+          ?<>Cena w cenniku = <b style={{color:"#e2e8f0"}}>all-in</b> (paliwowa wliczona). Koszt BL = netto UPS + paliwowa po rabacie {fuelDiscBL}%. Różnica = marża.</>
+          :<>Cena w cenniku = <b style={{color:"#e2e8f0"}}>bez paliwowej</b>. Klient płaci pełną paliwową ({fuelFull.toFixed(2).replace(".",",")}%). BL płaci po rabacie ({fuelBL.toFixed(2).replace(".",",")}%). Różnica = dodatkowy zysk.</>
         }
       </div>
 
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
         <div>
-          {/* FUEL */}
           <Box t="DOPŁATA PALIWOWA">
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
-              <Inp l="Stawka krajowa %" v={fuelK} s={setFuelK}/>
-              <Inp l="Stawka międzynarodowa %" v={fuelI} s={setFuelI}/>
+              <Inp l="Stawka krajowa %" v={fuelK} s={setFuelK}/><Inp l="Stawka międzynarodowa %" v={fuelI} s={setFuelI}/>
             </div>
             <div style={{fontSize:10,color:"#94a3b8",marginTop:6,display:"grid",gridTemplateColumns:"1fr 1fr",gap:4}}>
-              <span>Pełna (klient): <b style={{color:"#e2e8f0"}}>{fuelFull.toFixed(2).replace(".",",")}%</b> {isKraj?"(kraj)":"(międzyn.)"}</span>
+              <span>Pełna: <b style={{color:"#e2e8f0"}}>{fuelFull.toFixed(2).replace(".",",")}%</b> {isKraj?"(kraj)":"(międzyn.)"}</span>
               <span>Po rabacie BL ({fuelDiscBL}%): <b style={{color:"#22c55e"}}>{fuelBL.toFixed(2).replace(".",",")}%</b> ({svc?.fuelType==="std"?"Standard":"Express"})</span>
             </div>
           </Box>
 
-          {/* SERVICE */}
           <Box t="PARAMETRY PRZESYŁKI">
             <label style={ls}>Usługa</label>
             <select value={svcId} onChange={e=>{setSvcId(e.target.value);setZi(0);}} style={{...is,cursor:"pointer"}}>
@@ -196,84 +198,54 @@ export default function App(){
             </select>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginTop:6}}>
               <Inp l="Waga (kg)" v={weight} s={setWeight}/>
-              <Inp l={mode==="allin"?"Cena w cenniku BLPaczka (all-in)":"Cena w cenniku BLPaczka (bez paliw.)"} v={sellPrice} s={setSellPrice} p="np. 12,99"/>
+              <Inp l={mode==="allin"?"Cena cennikowa (all-in)":"Cena cennikowa (bez paliw.)"} v={sellPrice} s={setSellPrice} p="np. 12,99"/>
             </div>
           </Box>
 
-          {/* SURCHARGES */}
           <Box t="USŁUGI DODATKOWE / DOPŁATY">
-            <div style={{maxHeight:220,overflowY:"auto",paddingRight:4}}>
+            <div style={{maxHeight:180,overflowY:"auto",paddingRight:4}}>
               {SURCHARGES.map(sc=>{
-                const price=isKraj?sc.kP:sc.iP;
-                const on=!!actSC[sc.id];
-                const dim=sc.type==="fixed"&&price===0;
-                return(
-                  <label key={sc.id} style={{display:"flex",alignItems:"flex-start",gap:6,padding:"4px 0",borderBottom:"1px solid #1a1f2e",opacity:dim?0.25:1,cursor:dim?"default":"pointer"}}>
-                    <input type="checkbox" checked={on} onChange={()=>toggle(sc.id)} disabled={dim} style={{marginTop:2,accentColor:"#f59e0b"}}/>
-                    <div style={{flex:1}}>
-                      <div style={{fontSize:11,color:on?"#e2e8f0":"#94a3b8"}}>{sc.name}</div>
-                      <div style={{fontSize:9,color:"#475569"}}>
-                        {sc.type==="fixed"&&price>0&&`${f2(price)} zł`}
-                        {sc.type==="cod"&&`${(price*100).toFixed(1)}% kwoty, min ${f2(isKraj?sc.kMin:sc.iMin)} zł`}
-                        {sc.fuel&&<span style={{color:"#f59e0b"}}> · +paliwowa</span>}
-                      </div>
-                    </div>
-                  </label>
-                );
+                const price=isKraj?sc.kP:sc.iP;const on=!!actSC[sc.id];const dim=sc.type==="fixed"&&price===0;
+                return(<label key={sc.id} style={{display:"flex",alignItems:"flex-start",gap:6,padding:"4px 0",borderBottom:"1px solid #1a1f2e",opacity:dim?0.25:1,cursor:dim?"default":"pointer"}}>
+                  <input type="checkbox" checked={on} onChange={()=>toggle(sc.id)} disabled={dim} style={{marginTop:2,accentColor:"#f59e0b"}}/>
+                  <div style={{flex:1}}><div style={{fontSize:11,color:on?"#e2e8f0":"#94a3b8"}}>{sc.name}</div>
+                  <div style={{fontSize:9,color:"#475569"}}>{sc.type==="fixed"&&price>0&&`${f2(price)} zł`}{sc.type==="cod"&&`${(price*100).toFixed(1)}% kwoty, min ${f2(isKraj?sc.kMin:sc.iMin)} zł`}{sc.fuel&&<span style={{color:"#f59e0b"}}> · +paliwowa</span>}</div></div>
+                </label>);
               })}
             </div>
             {actSC.cod&&<div style={{marginTop:6}}><Inp l="Kwota pobrania (zł)" v={codVal} s={setCodVal} p="np. 150,00"/></div>}
           </Box>
 
-          {/* CALCULATION */}
           <Box t="KALKULACJA">
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:0}}>
-              {/* Cost BL */}
               <div style={{paddingRight:8,borderRight:"1px solid #1e293b"}}>
-                <div style={{fontSize:9,fontWeight:700,color:"#ef4444",letterSpacing:1,marginBottom:4}}>KOSZT BL (płacimy UPS)</div>
-                <R l="Cena netto UPS" v={f2(upsBase)} u="zł"/>
+                <div style={{fontSize:9,fontWeight:700,color:"#ef4444",letterSpacing:1,marginBottom:4}}>KOSZT BL</div>
+                <R l="Netto UPS" v={f2(upsBase)} u="zł"/>
                 <R l={`Paliwowa (${fuelBL.toFixed(2).replace(".",",")}%)`} v={f2(fuelOnBaseBL)} u="zł" dim/>
                 {scDetails.d.map(d=><R key={d.id} l={d.name} v={f2(d.cost)} u="zł" dim/>)}
-                {fuelOnScBL>0.005&&<R l="Paliwowa na usł. dod." v={f2(fuelOnScBL)} u="zł" dim/>}
-                <div style={{borderTop:"2px solid #334155",marginTop:4,paddingTop:4}}>
-                  <R l="KOSZT BL" v={f2(costBL)} u="zł" hi c="#ef4444"/>
-                </div>
+                {fuelOnScBL>0.005&&<R l="Paliwowa usł. dod." v={f2(fuelOnScBL)} u="zł" dim/>}
+                <div style={{borderTop:"2px solid #334155",marginTop:4,paddingTop:4}}><R l="KOSZT BL" v={f2(costBL)} u="zł" hi c="#ef4444"/></div>
               </div>
-              {/* Revenue */}
               <div style={{paddingLeft:8}}>
-                <div style={{fontSize:9,fontWeight:700,color:"#3b82f6",letterSpacing:1,marginBottom:4}}>PRZYCHÓD (klient płaci)</div>
-                {mode==="allin"?(
-                  <>
-                    <R l="Cena cennikowa (all-in)" v={sp>0?f2(sp):"—"} u="zł"/>
-                    {scDetails.d.map(d=><R key={d.id} l={d.name} v={f2(d.cost)} u="zł" dim/>)}
-                    {fuelOnScFull>0.005&&<R l="Paliwowa na usł. dod." v={f2(fuelOnScFull)} u="zł" dim/>}
-                  </>
-                ):(
-                  <>
-                    <R l="Cena cennikowa" v={sp>0?f2(sp):"—"} u="zł"/>
-                    <R l={`Paliwowa pełna (${fuelFull.toFixed(2).replace(".",",")}%)`} v={sp>0?f2(fuelOnSellFull):"—"} u="zł" dim/>
-                    {scDetails.d.map(d=><R key={d.id} l={d.name} v={f2(d.cost)} u="zł" dim/>)}
-                    {fuelOnScFull>0.005&&<R l="Paliwowa na usł. dod." v={f2(fuelOnScFull)} u="zł" dim/>}
-                  </>
-                )}
-                <div style={{borderTop:"2px solid #334155",marginTop:4,paddingTop:4}}>
-                  <R l="KLIENT PŁACI" v={clientTotal!=null&&sp>0?f2(clientTotal):"—"} u="zł" hi c="#3b82f6"/>
-                </div>
+                <div style={{fontSize:9,fontWeight:700,color:"#3b82f6",letterSpacing:1,marginBottom:4}}>PRZYCHÓD</div>
+                {mode==="allin"?<><R l="Cena all-in" v={sp>0?f2(sp):"—"} u="zł"/></>
+                :<><R l="Cena cennikowa" v={sp>0?f2(sp):"—"} u="zł"/><R l={`Paliwowa (${fuelFull.toFixed(2).replace(".",",")}%)`} v={sp>0?f2(fuelOnSellFull):"—"} u="zł" dim/></>}
+                {scDetails.d.map(d=><R key={d.id} l={d.name} v={f2(d.cost)} u="zł" dim/>)}
+                {fuelOnScFull>0.005&&<R l="Paliwowa usł. dod." v={f2(fuelOnScFull)} u="zł" dim/>}
+                <div style={{borderTop:"2px solid #334155",marginTop:4,paddingTop:4}}><R l="KLIENT PŁACI" v={clientTotal!=null&&sp>0?f2(clientTotal):"—"} u="zł" hi c="#3b82f6"/></div>
               </div>
             </div>
-
             {sp>0&&costBL!=null&&marginAmt!=null&&(
               <div style={{marginTop:8,padding:8,background:marginAmt>=0?"rgba(34,197,94,0.06)":"rgba(239,68,68,0.06)",borderRadius:5,border:`1px solid ${marginAmt>=0?"#166534":"#7f1d1d"}`}}>
                 <div style={{display:"grid",gridTemplateColumns:mode==="separate"?"1fr 1fr 1fr":"1fr 1fr",gap:4}}>
-                  <R l="Marża łączna" v={f2(marginAmt)} u="zł" c={marginAmt>=0?"#22c55e":"#ef4444"}/>
+                  <R l="Marża" v={f2(marginAmt)} u="zł" c={marginAmt>=0?"#22c55e":"#ef4444"}/>
                   <R l="Marża %" v={fP(marginPct)} c={marginAmt>=0?"#22c55e":"#ef4444"}/>
-                  {mode==="separate"&&<R l="w tym zysk na paliw." v={fuelProfit!=null?f2(fuelProfit):"—"} u="zł" c="#f59e0b"/>}
+                  {mode==="separate"&&fuelProfit!=null&&<R l="Zysk na paliw." v={f2(fuelProfit)} u="zł" c="#f59e0b"/>}
                 </div>
               </div>
             )}
           </Box>
 
-          {/* SUGGESTED */}
           <Box t={mode==="allin"?"SUGEROWANA CENA ALL-IN":"SUGEROWANA CENA CENNIKOWA"}>
             <div style={{display:"grid",gridTemplateColumns:"80px 1fr",gap:6,alignItems:"end"}}>
               <Inp l="Marża %" v={tgtM} s={setTgtM}/>
@@ -284,47 +256,68 @@ export default function App(){
             {sugSellPrice!=null&&sugSellPrice>0&&costBL!=null&&(
               <div style={{fontSize:9,color:"#64748b",marginTop:4}}>
                 {mode==="allin"
-                  ?<>Wpisz w cennik: <b style={{color:"#e2e8f0"}}>{f2(sugSellPrice)} zł</b> (all-in) → koszt BL: <b style={{color:"#ef4444"}}>{f2(costBL)} zł</b> → zysk: <b style={{color:"#22c55e"}}>{f2(sugClientTotal-costBL)} zł</b> ({tgtM}%)</>
-                  :<>Wpisz w cennik: <b style={{color:"#e2e8f0"}}>{f2(sugSellPrice)} zł</b> → klient z paliwową: <b style={{color:"#3b82f6"}}>{f2(sugClientTotal)} zł</b> → koszt BL: <b style={{color:"#ef4444"}}>{f2(costBL)} zł</b> → zysk: <b style={{color:"#22c55e"}}>{f2(sugClientTotal-costBL)} zł</b> ({tgtM}%)</>
+                  ?<>Cennik: <b style={{color:"#e2e8f0"}}>{f2(sugSellPrice)} zł</b> → koszt: <b style={{color:"#ef4444"}}>{f2(costBL)} zł</b> → zysk: <b style={{color:"#22c55e"}}>{f2(sugClientTotal-costBL)} zł</b> ({tgtM}%)</>
+                  :<>Cennik: <b style={{color:"#e2e8f0"}}>{f2(sugSellPrice)} zł</b> → klient z paliw.: <b style={{color:"#3b82f6"}}>{f2(sugClientTotal)} zł</b> → zysk: <b style={{color:"#22c55e"}}>{f2(sugClientTotal-costBL)} zł</b> ({tgtM}%)</>
                 }
               </div>
             )}
           </Box>
         </div>
 
-        {/* RIGHT: PRICE TABLE */}
+        {/* RIGHT COLUMN */}
         <div>
-          <Box t={`CENNIK: ${svc?.short||""} · ${zone?zL(zone):""}`}>
-            <div style={{maxHeight:"calc(100vh - 100px)",overflowY:"auto",fontSize:10}}>
+          {/* COMPARISON TABLE */}
+          {isStdKraj&&compTable&&(
+            <Box t="PORÓWNANIE CENNIKÓW — UPS Standard Kraj">
+              <div style={{display:"flex",gap:4,marginBottom:8}}>
+                <button style={tierBtn("ANY")} onClick={()=>setClientType("ANY")}>Pozostali (poza Base)</button>
+                <button style={tierBtn("BL")} onClick={()=>setClientType("BL")}>BaseLinker</button>
+              </div>
+              <div style={{maxHeight:500,overflowY:"auto",fontSize:10}}>
+                <table style={{width:"100%",borderCollapse:"collapse"}}>
+                  <thead><tr style={{position:"sticky",top:0,background:"#0f172a",borderBottom:"1px solid #334155"}}>
+                    <TH>kg</TH><TH r>Koszt BL</TH>
+                    <TH r style={{color:"#f97316"}}>Stary</TH><TH r style={{color:"#f97316"}}>Marża</TH>
+                    <TH r style={{color:"#22c55e"}}>Nowy</TH><TH r style={{color:"#22c55e"}}>Marża</TH>
+                  </tr></thead>
+                  <tbody>{compTable.map((r,i)=>{
+                    const act=Math.ceil(w)===r.kg||(Math.ceil(w)<=r.kg&&(i===0||Math.ceil(w)>compTable[i-1].kg));
+                    return(<tr key={i} style={{background:act?"rgba(245,158,11,0.1)":i%2?"rgba(255,255,255,0.02)":"transparent",borderLeft:act?"3px solid #f59e0b":"3px solid transparent"}}>
+                      <TD>{r.kg}</TD>
+                      <TD r style={{color:"#fca5a5"}}>{f2(r.cost)}</TD>
+                      <TD r style={{color:"#fdba74"}}>{r.oldP!=null?f2(r.oldP):"—"}</TD>
+                      <TD r style={{color:r.oldMargin>=0?"#86efac":"#fca5a5",fontWeight:700}}>{r.oldMargin!=null?`${f2(r.oldMargin)} (${fP(r.oldPct)})`:"—"}</TD>
+                      <TD r style={{color:"#86efac"}}>{r.newP!=null?f2(r.newP):"—"}</TD>
+                      <TD r style={{color:r.newMargin>=0?"#86efac":"#fca5a5",fontWeight:700}}>{r.newMargin!=null?`${f2(r.newMargin)} (${fP(r.newPct)})`:"—"}</TD>
+                    </tr>);
+                  })}</tbody>
+                </table>
+              </div>
+              <div style={{fontSize:8,color:"#475569",marginTop:6,borderTop:"1px solid #1e293b",paddingTop:4}}>
+                Koszt BL = netto UPS + paliwowa {fuelBL.toFixed(2).replace(".",",")}% (rabat {fuelDiscBL}%). Ceny all-in — marża = cena sprzedaży - koszt BL.
+                {compTable.some(r=>r.oldMargin<0)&&<span style={{color:"#ef4444"}}> ⚠ UWAGA: Stary cennik — na czerwono to pozycje na których tracisz!</span>}
+              </div>
+            </Box>
+          )}
+
+          {/* PRICE TABLE */}
+          <Box t={`CENNIK UPS: ${svc?.short||""} · ${zone?zL(zone):""}`}>
+            <div style={{maxHeight:isStdKraj?"300px":"calc(100vh - 100px)",overflowY:"auto",fontSize:10}}>
               <table style={{width:"100%",borderCollapse:"collapse"}}>
                 <thead><tr style={{position:"sticky",top:0,background:"#0f172a",borderBottom:"1px solid #334155"}}>
-                  <TH>kg</TH>
-                  <TH r>Netto UPS</TH>
-                  <TH r style={{color:"#ef4444"}}>Koszt BL</TH>
-                  {mode==="allin"
-                    ?<TH r style={{color:"#f59e0b"}}>Min. cena all-in</TH>
-                    :<><TH r style={{color:"#3b82f6"}}>Z paliw. pełną</TH><TH r style={{color:"#f59e0b"}}>Zysk paliw.</TH></>
-                  }
+                  <TH>kg</TH><TH r>Netto UPS</TH><TH r style={{color:"#ef4444"}}>Koszt BL</TH>
+                  {mode==="allin"?<TH r style={{color:"#f59e0b"}}>Min. all-in</TH>
+                  :<><TH r style={{color:"#3b82f6"}}>Z paliw. pełną</TH><TH r style={{color:"#f59e0b"}}>Zysk paliw.</TH></>}
                 </tr></thead>
                 <tbody>{ptable.map((r,i)=>{
                   const act=Math.ceil(w)<=r.kg&&(i===0||Math.ceil(w)>ptable[i-1].kg);
                   return(<tr key={i} style={{background:act?"rgba(245,158,11,0.1)":i%2?"rgba(255,255,255,0.02)":"transparent",borderLeft:act?"3px solid #f59e0b":"3px solid transparent"}}>
-                    <TD>{r.kg}</TD>
-                    <TD r>{f2(r.ups)}</TD>
-                    <TD r style={{color:"#fca5a5"}}>{f2(r.costBL)}</TD>
-                    {mode==="allin"
-                      ?<TD r style={{color:"#fbbf24",fontWeight:700}}>{f2(r.costBL)}</TD>
-                      :<><TD r style={{color:"#93c5fd"}}>{f2(r.withFuelFull)}</TD><TD r style={{color:"#fbbf24"}}>{f2(r.fuelProfit)}</TD></>
-                    }
+                    <TD>{r.kg}</TD><TD r>{f2(r.ups)}</TD><TD r style={{color:"#fca5a5"}}>{f2(r.costBL)}</TD>
+                    {mode==="allin"?<TD r style={{color:"#fbbf24",fontWeight:700}}>{f2(r.costBL)}</TD>
+                    :<><TD r style={{color:"#93c5fd"}}>{f2(r.withFuelFull)}</TD><TD r style={{color:"#fbbf24"}}>{f2(r.fuelProfit)}</TD></>}
                   </tr>);
                 })}</tbody>
               </table>
-            </div>
-            <div style={{fontSize:8,color:"#475569",marginTop:6,borderTop:"1px solid #1e293b",paddingTop:4}}>
-              {mode==="allin"
-                ?`Koszt BL = netto + paliwowa po rabacie (${fuelBL.toFixed(2).replace(".",",")}%). Min. cena all-in = koszt BL (0% marży). Wpisz cenę wyższą by mieć marżę.`
-                :`Koszt BL = netto + paliwowa ${fuelBL.toFixed(2).replace(".",",")}% · Z paliw. pełną = netto + ${fuelFull.toFixed(2).replace(".",",")}% · Zysk paliw. = różnica`
-              }
             </div>
           </Box>
         </div>
